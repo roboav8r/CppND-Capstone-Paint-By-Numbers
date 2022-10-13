@@ -1,10 +1,6 @@
-# CPPND: Capstone Hello World Repo
+# Udacity C++ Nanodegree Capstone Repo: "Paint By Numbers"
 
-This is a starter repo for the Capstone project in the [Udacity C++ Nanodegree Program](https://www.udacity.com/course/c-plus-plus-nanodegree--nd213).
-
-The Capstone Project gives you a chance to integrate what you've learned throughout this program. This project will become an important part of your portfolio to share with current and future colleagues and employers.
-
-In this project, you can build your own C++ application starting with this repo, following the principles you have learned throughout this Nanodegree Program. This project will demonstrate that you can independently create applications using a wide range of C++ features.
+This program segments an image into a smaller subset of colors in a paint-by-number style using OpenCV in C++. This is based off of the starter repo for the Capstone project in the [Udacity C++ Nanodegree Program](https://www.udacity.com/course/c-plus-plus-nanodegree--nd213).
 
 ## Dependencies for Running Locally
 * cmake >= 3.7
@@ -24,3 +20,12 @@ In this project, you can build your own C++ application starting with this repo,
 2. Make a build directory in the top level directory: `mkdir build && cd build`
 3. Compile: `cmake .. && make`
 4. Run it: `./HelloWorld`.
+
+# Rubric 
+https://review.udacity.com/#!/rubrics/2533/view
+
+# Credit
+Based off of the image segmentation tutorial here:
+https://docs.openvino.ai/latest/omz_demos_segmentation_demo_cpp.html#doxid-omz-demos-segmentation-demo-cpp
+
+And OpenCV tutorial here:

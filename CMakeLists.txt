@@ -5,6 +5,9 @@ add_definitions(-std=c++17)
 set(CXX_FLAGS "-Wall")
 set(CMAKE_CXX_FLAGS, "${CXX_FLAGS}")
 
-project(HelloWorld)
+project(PaintByNumbers)
 
-add_executable(HelloWorld src/main.cpp)
+find_package (OpenCV 4.0.0 REQUIRED)
+include_directories ("/usr/include/opencv4/")
+
+add_executable(PaintByNumbers src/main.cpp)
