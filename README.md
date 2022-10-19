@@ -19,7 +19,7 @@ This program segments an image into a smaller subset of colors in a paint-by-num
 1. Clone this repo.
 2. Make a build directory in the top level directory: `mkdir build && cd build`
 3. Compile: `cmake .. && make`
-4. Run it: `./HelloWorld`.
+4. Run it: `./PaintByNumbers ../data/dog1.jpg`.
 
 # Rubric 
 https://review.udacity.com/#!/rubrics/2533/view

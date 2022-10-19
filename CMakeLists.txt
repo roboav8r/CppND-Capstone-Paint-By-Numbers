@@ -7,7 +7,9 @@ set(CMAKE_CXX_FLAGS, "${CXX_FLAGS}")
 
 project(PaintByNumbers)
 
-find_package (OpenCV 4.0.0 REQUIRED)
+find_package (OpenCV REQUIRED)
 include_directories ("/usr/include/opencv4/")
 
 add_executable(PaintByNumbers src/main.cpp)
+
+target_link_libraries(PaintByNumbers ${OpenCV_LIBS} )
