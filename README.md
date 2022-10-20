@@ -19,7 +19,12 @@ This program segments an image into a smaller subset of colors in a paint-by-num
 1. Clone this repo.
 2. Make a build directory in the top level directory: `mkdir build && cd build`
 3. Compile: `cmake .. && make`
-4. Run it: `./PaintByNumbers ../data/dog1.jpg`.
+4. Run it: `./PaintByNumbers ../data/dog1.jpg 0.1`.
+
+Also, try these combinations!
+`./PaintByNumbers ../data/dog2.jpg 0.1 21 21 5 0.75 0 0.01 1`
+
+
 
 # Rubric 
 https://review.udacity.com/#!/rubrics/2533/view
@@ -28,4 +33,11 @@ https://review.udacity.com/#!/rubrics/2533/view
 Based off of the image segmentation tutorial here:
 https://docs.openvino.ai/latest/omz_demos_segmentation_demo_cpp.html#doxid-omz-demos-segmentation-demo-cpp
 
-And OpenCV tutorial here:
+And OpenCV tutorials here:
+
+Semantic Segmentation:
+https://docs.opencv.org/4.2.0/d4/d88/samples_2dnn_2segmentation_8cpp-example.html
+    // Subtract background
+    // https://learnopencv.com/pytorch-for-beginners-semantic-segmentation-using-torchvision
+    // Adapted from https://learnopencv.com/applications-of-foreground-background-separation-with-semantic-segmentation/
+    // https://docs.openvino.ai/latest/omz_tools_downloader.html#doxid-omz-tools-downloader
