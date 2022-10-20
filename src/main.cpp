@@ -64,7 +64,7 @@ int main(int argc, char *argv[]) {
     
     // Apply laplace filter to source
     cv::Mat smooth;
-    src.convertTo(smooth, CV_32F);
+    scaled.convertTo(smooth, CV_32F);
     cv::Mat smoothed = smooth - imgLaplacian;
     
     // Display the smoothed image
