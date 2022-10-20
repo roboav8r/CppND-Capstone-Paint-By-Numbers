@@ -22,7 +22,7 @@ std::string keys =
     "{@dilateWidth | 3 | Integer width to dilate the peaks }";
 
 // Member variables
-cv::Mat srcImg, scaledImg;
+cv::Mat srcImg, scaledImg, filteredImg, smoothedImg;
 
 // Methods
 
@@ -62,6 +62,26 @@ void scaleImage(const cv::Mat& inputImg, const float scaleFactor, cv::Mat& outpu
     if (display) { showImage(outputImg, "Scaled Image");};
 }
 
+// Mean-shift filter the image
+void filterImage(const cv::Mat& inputImg, const int sw, const int cw, cv::Mat& outputImg, const bool display)
+{
+    std::cout << "Filtering image with spatial window: " << sw << " pixels, color window: " << cw << " pixels" << std::endl;
+    cv::pyrMeanShiftFiltering(inputImg,outputImg,sw,cw);
+    
+    // Display the filtered image
+    if (display) { showImage(outputImg, "Mean-Shift Filtered Image");}
+}
+
+// Gaussian Blur/smooth the image
+void smoothImage(const cv::Mat& inputImg, const int blurDim, cv::Mat& outputImg, const bool display)
+{
+    std::cout << "Smoothing using a Gaussian blur of " << blurDim << " pixels" << std::endl;
+    cv::GaussianBlur(inputImg,outputImg,cv::Size(blurDim,blurDim),0,0);
+    
+    // Display the smoothed image
+    if (display) { showImage(outputImg, "Smoothed Image");}
+}
+
 // Main program
 int main(int argc, char *argv[]) {
 
@@ -75,52 +95,14 @@ int main(int argc, char *argv[]) {
     // Load the image from file
     loadImage(parser.get<cv::String>( "@input" ), srcImg, displayIntermediate);
 
-    // SCALE the image for easier visibility
+    // Scale the image
     scaleImage(srcImg, scale, scaledImg, displayIntermediate);
-    // int heightScaled{(int)(srcImg.rows*scale)};
-    // int widthScaled{(int)(srcImg.cols*scale)};
-    // std::cout << "Resizing source image to: " << heightScaled << "x" << widthScaled << std::endl;
-    // cv::Mat scaledImg;
-    // cv::resize(srcImg, scaledImg, cv::Size(widthScaled, heightScaled), cv::INTER_LINEAR);
-    
-    // // Show the scaled image
-    // std::string scaledName{"Scaled Image"};
-    // cv::namedWindow(scaledName);
-    // cv::imshow(scaledName, scaledImg); // Show our image inside the created window.
 
-    // // Cleanup
-    // cv::waitKey(0); // Wait for any keystroke in the window
-    // cv::destroyWindow(scaledName); //destroy the created window
+    // Filter the image
+    filterImage(scaledImg, parser.get<int>( "@spatialWindow" ), parser.get<int>( "@colorWindow" ), filteredImg, displayIntermediate);
 
-
-    // FILTERING the image
-    cv::Mat filteredImg;
-    int spatialWindow = parser.get<int>( "@spatialWindow" );
-    int colorWindow = parser.get<int>( "@colorWindow" );
-    std::cout << "Filtering the scaled image with spatial window: " << spatialWindow << " pixels, color window: " << colorWindow << " pixels" << std::endl;
-    cv::pyrMeanShiftFiltering(scaledImg,filteredImg,spatialWindow,colorWindow);
-    
-    // Display the filtered image
-    std::string filteredName{"Mean Shift Filtered"};
-    cv::namedWindow(filteredName);
-    cv::imshow(filteredName, filteredImg); // Show our image inside the created window.
-    cv::waitKey(0); // Wait for any keystroke in the window
-    cv::destroyWindow(filteredName); //destroy the created window
-
-
-    // SMOOTHING the image
-    int smoothingKernelDim = parser.get<int>( "@blurWidth" );
-    std::cout << "Smoothing using a Gaussian blur of " << smoothingKernelDim << " pixels" << std::endl;
-    cv::Mat smoothedImg;
-    cv::GaussianBlur(filteredImg,smoothedImg,cv::Size(smoothingKernelDim,smoothingKernelDim),0,0);
-    
-    // Display the smoothed image
-    std::string smoothedName{"Smoothed"};
-    cv::namedWindow(smoothedName);
-    cv::imshow(smoothedName, smoothedImg); // Show our image inside the created window.
-    cv::waitKey(0); // Wait for any keystroke in the window
-    cv::destroyWindow(smoothedName); //destroy the created window
-
+    // Smooth/blur the image
+    smoothImage(filteredImg, parser.get<int>( "@blurWidth" ), smoothedImg, displayIntermediate);
 
     // SHARPEN the image
     float sharpCoeff = parser.get<float>( "@sharpCoeff" );
