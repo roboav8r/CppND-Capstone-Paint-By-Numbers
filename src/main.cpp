@@ -22,7 +22,9 @@ std::string keys =
     "{@dilateWidth | 3 | Integer width to dilate the peaks }";
 
 // Member variables
-cv::Mat srcImg, scaledImg, filteredImg, smoothedImg;
+cv::Mat srcImg, scaledImg, filteredImg, smoothedImg, sharperImg, distImg, peakImg, markerImg;
+std::vector<std::vector<cv::Point>> colorContours;
+cv::Mat markers = cv::Mat::zeros(distImg.size(), CV_32S);
 
 // Methods
 
@@ -82,6 +84,79 @@ void smoothImage(const cv::Mat& inputImg, const int blurDim, cv::Mat& outputImg,
     if (display) { showImage(outputImg, "Smoothed Image");}
 }
 
+// Sharpen the image
+void sharpenImage(const cv::Mat& inputImg, const float sc, cv::Mat& outputImg, const bool display)
+{
+    cv::Mat laplacianImg, sharpImg;
+    cv::Mat kernel = (cv::Mat_<float>(3,3) <<
+                  sc,  sc, sc,
+                  sc, -8*sc, sc,
+                  sc,  sc, sc);
+    std::cout << "Sharpening image using kernel: " << std::endl;
+    std::cout << kernel << std::endl;
+    cv::filter2D(inputImg, laplacianImg, CV_32F, kernel);
+
+    inputImg.convertTo(sharpImg, CV_32F);
+    outputImg = sharpImg - laplacianImg;
+    outputImg.convertTo(outputImg, CV_8UC3);
+    laplacianImg.convertTo(laplacianImg, CV_8UC3);
+
+    // Display the sharpened image
+    if (display) { showImage(outputImg, "Sharpened Image");}
+}
+
+// Compute distance transform
+void distanceTransform(const cv::Mat& inputImg, const int threshold, cv::Mat& outputImg, const bool display)
+{
+    cv::Mat grayImg;
+    cv::cvtColor(inputImg, grayImg, cv::COLOR_BGR2GRAY);
+    std::cout << "Converting to binary image with 8-bit threshold " << threshold << std::endl;
+    cv::threshold(grayImg, grayImg, threshold, 255, cv::THRESH_BINARY | cv::THRESH_OTSU);
+    if (display) { showImage(grayImg, "Grayscale Image");}
+
+    // Compute distance image
+    cv::distanceTransform(grayImg,outputImg,cv::DIST_L2, 3); // Potential improvement: the final mask parameter can be an input variable
+    cv::normalize(outputImg, outputImg, 0, 1.0, cv::NORM_MINMAX);
+    if (display) { showImage(outputImg, "Distance Transform Image");}
+}
+
+// Find peaks of the transformed image
+void findPeaks(const cv::Mat& inputImg, const float thresh, const int dilWid, cv::Mat& outputImg, const bool display)
+{
+    std::cout << "Finding peaks in Distance Image using Peak Threshold: " << thresh << ", Dilation width: " << dilWid << std::endl;
+    cv::threshold(inputImg, inputImg, thresh, 1.0, cv::THRESH_BINARY);
+    cv::Mat kernelImg = cv::Mat::ones(dilWid, dilWid, CV_8U);
+    cv::dilate(inputImg, outputImg, kernelImg);
+    if (display) { showImage(outputImg, "Peaks");}
+}
+
+// Find markers of each individual segment
+void findMarkers(const cv::Mat& inputImg, std::vector<std::vector<cv::Point>>& contours, cv::Mat& markers, cv::Mat& outputImg, const bool display)
+{
+    // Create the CV_8U version of the distance image
+    // It is needed for findContours()
+    cv::Mat distImg_8u;
+    inputImg.convertTo(distImg_8u, CV_8U);
+    
+    // Find total markers
+    cv::findContours(distImg_8u, contours, cv::RETR_EXTERNAL, cv::CHAIN_APPROX_SIMPLE);
+    // Create the marker image for the watershed algorithm
+    // cv::Mat markers = cv::Mat::zeros(distImg.size(), CV_32S);
+    // Draw the foreground markers
+    for (size_t i = 0; i < contours.size(); i++)
+    {
+        drawContours(markers, contours, static_cast<int>(i), cv::Scalar(static_cast<int>(i)+1), -1);
+    }
+    // Draw the background marker
+    cv::circle(markers, cv::Point(5,5), 3, cv::Scalar(255), -1);
+    //cv::Mat markers8u;
+    markers.convertTo(outputImg, CV_8U, 10);
+    // imshow("Markers", markers8u);
+    // cv::waitKey(0); // Wait for any keystroke in the window
+    // cv::destroyWindow("Markers"); //destroy the created window
+    if (display) { showImage(outputImg, "Markers");}
+}
+
 // Main program
 int main(int argc, char *argv[]) {
 
@@ -105,86 +180,41 @@ int main(int argc, char *argv[]) {
     smoothImage(filteredImg, parser.get<int>( "@blurWidth" ), smoothedImg, displayIntermediate);
 
     // SHARPEN the image
-    float sharpCoeff = parser.get<float>( "@sharpCoeff" );
-    cv::Mat kernel = (cv::Mat_<float>(3,3) <<
-                  sharpCoeff,  sharpCoeff, sharpCoeff,
-                  sharpCoeff, -8*sharpCoeff, sharpCoeff,
-                  sharpCoeff,  sharpCoeff, sharpCoeff);
-    std::cout << "Sharpening with kernel: " << std::endl;
-    std::cout << kernel << std::endl;
-    cv::Mat laplacianImg;
-    cv::filter2D(smoothedImg, laplacianImg, CV_32F, kernel);
-    cv::Mat sharpImg;
-    smoothedImg.convertTo(sharpImg, CV_32F);
-    cv::Mat resultImg = sharpImg - laplacianImg;
-    resultImg.convertTo(resultImg, CV_8UC3);
-    laplacianImg.convertTo(laplacianImg, CV_8UC3);
+    sharpenImage(smoothedImg, parser.get<float>( "@sharpCoeff" ), sharperImg, displayIntermediate);
 
-    // Display the sharpened image
-    std::string sharpName{"Sharpened Image"};
-    cv::namedWindow(sharpName);
-    cv::imshow(sharpName, resultImg); // Show our image inside the created window.
-    cv::waitKey(0); // Wait for any keystroke in the window
-    cv::destroyWindow(sharpName); //destroy the created window
-
-
-    // Generate grayscale from filtered image
-    cv::Mat grayImg;
-    cv::cvtColor(resultImg, grayImg, cv::COLOR_BGR2GRAY);
-    int binaryThreshold = parser.get<int>( "@binThresh" );
-    std::cout << "Converting to binary image with 8-bit threshold " << binaryThreshold << std::endl;
-    cv::threshold(grayImg, grayImg, binaryThreshold, 255, cv::THRESH_BINARY | cv::THRESH_OTSU);
-    imshow("Grayscale Image", grayImg);
-    cv::waitKey(0); // Wait for any keystroke in the window
-    cv::destroyWindow("Grayscale Image"); //destroy the created window
-
-
-    // Compute distance image
-    cv::Mat distImg;
-    cv::distanceTransform(grayImg,distImg,cv::DIST_L2,5);
-    cv::normalize(distImg, distImg, 0, 1.0, cv::NORM_MINMAX);
-    imshow("Distance Transform Image", distImg);
-    cv::waitKey(0); // Wait for any keystroke in the window
-    cv::destroyWindow("Distance Transform Image"); //destroy the created window
-
+    // Generate distance transform
+    distanceTransform(sharperImg, parser.get<int>( "@binThresh" ), distImg, displayIntermediate);
 
     // Find peaks of the distance image via thresholding and dilation
-    float peakThresh = parser.get<float>( "@peakThresh" );
-    int dilateWidth = parser.get<int>( "@dilateWidth" );
-    std::cout << "Finding peaks in Distance Image using Peak Threshold: " << peakThresh << ", Dilation width: " << dilateWidth << std::endl;
-    cv::threshold(distImg, distImg, peakThresh, 1.0, cv::THRESH_BINARY);
-    cv::Mat kernelImg = cv::Mat::ones(dilateWidth, dilateWidth, CV_8U);
-    cv::dilate(distImg, distImg, kernelImg);
-    imshow("Peaks", distImg);
-    cv::waitKey(0); // Wait for any keystroke in the window
-    cv::destroyWindow("Peaks"); //destroy the created window
+    findPeaks(distImg, parser.get<float>( "@peakThresh" ), parser.get<int>( "@dilateWidth" ), peakImg, displayIntermediate);
 
     // Find markers
-    // Create the CV_8U version of the distance image
-    // It is needed for findContours()
-    cv::Mat distImg_8u;
-    distImg.convertTo(distImg_8u, CV_8U);
-    // Find total markers
-    std::vector<std::vector<cv::Point> > contours;
-    cv::findContours(distImg_8u, contours, cv::RETR_EXTERNAL, cv::CHAIN_APPROX_SIMPLE);
-    // Create the marker image for the watershed algorithm
-    cv::Mat markers = cv::Mat::zeros(distImg.size(), CV_32S);
-    // Draw the foreground markers
-    for (size_t i = 0; i < contours.size(); i++)
-    {
-        drawContours(markers, contours, static_cast<int>(i), cv::Scalar(static_cast<int>(i)+1), -1);
-    }
-    // Draw the background marker
-    cv::circle(markers, cv::Point(5,5), 3, cv::Scalar(255), -1);
-    cv::Mat markers8u;
-    markers.convertTo(markers8u, CV_8U, 10);
-    imshow("Markers", markers8u);
-    cv::waitKey(0); // Wait for any keystroke in the window
-    cv::destroyWindow("Markers"); //destroy the created window
+    findMarkers(distImg, colorContours, markers, markerImg, displayIntermediate);
+    // // Create the CV_8U version of the distance image
+    // // It is needed for findContours()
+    // cv::Mat distImg_8u;
+    // distImg.convertTo(distImg_8u, CV_8U);
+    // // Find total markers
+    // std::vector<std::vector<cv::Point> > contours;
+    // cv::findContours(distImg_8u, contours, cv::RETR_EXTERNAL, cv::CHAIN_APPROX_SIMPLE);
+    // // Create the marker image for the watershed algorithm
+    // cv::Mat markers = cv::Mat::zeros(distImg.size(), CV_32S);
+    // // Draw the foreground markers
+    // for (size_t i = 0; i < contours.size(); i++)
+    // {
+    //     drawContours(markers, contours, static_cast<int>(i), cv::Scalar(static_cast<int>(i)+1), -1);
+    // }
+    // // Draw the background marker
+    // cv::circle(markers, cv::Point(5,5), 3, cv::Scalar(255), -1);
+    // cv::Mat markers8u;
+    // markers.convertTo(markers8u, CV_8U, 10);
+    // imshow("Markers", markers8u);
+    // cv::waitKey(0); // Wait for any keystroke in the window
+    // cv::destroyWindow("Markers"); //destroy the created window
 
 
     // Perform the watershed algorithm
-    cv::watershed(filteredImg, markers);
+    cv::watershed(sharperImg, markers);
     cv::Mat mark;
     markers.convertTo(mark, CV_8U);
     bitwise_not(mark, mark);
@@ -194,7 +224,7 @@ int main(int argc, char *argv[]) {
 
     // Generate random colors
     std::vector<cv::Vec3b> colors;
-    for (size_t i = 0; i < contours.size(); i++)
+    for (size_t i = 0; i < colorContours.size(); i++)
     {
         int b = cv::theRNG().uniform(0, 256);
         int g = cv::theRNG().uniform(0, 256);
@@ -209,7 +239,7 @@ int main(int argc, char *argv[]) {
         for (int j = 0; j < markers.cols; j++)
         {
             int index = markers.at<int>(i,j);
-            if (index > 0 && index <= static_cast<int>(contours.size()))
+            if (index > 0 && index <= static_cast<int>(colorContours.size()))
             {
                 dst.at<cv::Vec3b>(i,j) = colors[index-1];
             }
