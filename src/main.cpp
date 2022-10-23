@@ -1,9 +1,6 @@
 #include <iostream>
-// #include <filesystem>
 
 #include <opencv2/core.hpp>
-// #include <opencv2/core/utility.hpp>
-// #include <opencv2/imgcodecs.hpp>
 #include <opencv2/imgproc.hpp>
 #include <opencv2/highgui.hpp>
 
@@ -22,9 +19,9 @@ std::string keys =
     "{@dilateWidth | 3 | Integer width to dilate the peaks }";
 
 // Member variables
-cv::Mat srcImg, scaledImg, filteredImg, smoothedImg, sharperImg, distImg, peakImg, markerImg;
+cv::Mat srcImg, scaledImg, filteredImg, smoothedImg, sharperImg, distImg, peakImg, markers, markerImg, watershedMarkerImg, finalImg;
 std::vector<std::vector<cv::Point>> colorContours;
-cv::Mat markers = cv::Mat::zeros(distImg.size(), CV_32S);
+std::vector<cv::Vec3b> colors;
 
 // Methods
 
@@ -140,8 +137,7 @@ void findMarkers(const cv::Mat& inputImg, std::vector<std::vector<cv::Point>>& c
     
     // Find total markers
     cv::findContours(distImg_8u, contours, cv::RETR_EXTERNAL, cv::CHAIN_APPROX_SIMPLE);
-    // Create the marker image for the watershed algorithm
-    // cv::Mat markers = cv::Mat::zeros(distImg.size(), CV_32S);
+    markers = cv::Mat::zeros(distImg.size(), CV_32S);
     // Draw the foreground markers
     for (size_t i = 0; i < contours.size(); i++)
     {
@@ -151,10 +147,83 @@ void findMarkers(const cv::Mat& inputImg, std::vector<std::vector<cv::Point>>& c
     cv::circle(markers, cv::Point(5,5), 3, cv::Scalar(255), -1);
     //cv::Mat markers8u;
     markers.convertTo(outputImg, CV_8U, 10);
-    // imshow("Markers", markers8u);
-    // cv::waitKey(0); // Wait for any keystroke in the window
-    // cv::destroyWindow("Markers"); //destroy the created window
     if (display) { showImage(outputImg, "Markers");}
+}
+
+void findWatershedMarkers(const cv::Mat& inputImg, cv::Mat& markers, cv::Mat& outputImg, const bool display)
+{
+    cv::watershed(inputImg, markers);
+    //cv::Mat outputImg;
+    markers.convertTo(outputImg, CV_8U);
+    bitwise_not(outputImg, outputImg);
+
+    if (display) { showImage(outputImg, "Watershed Markers");}
+}
+
+void getRandomColors(const std::vector<std::vector<cv::Point>> contours, std::vector<cv::Vec3b>& colors)
+{
+
+    for (size_t i = 0; i < contours.size(); i++)
+    {
+        int b = cv::theRNG().uniform(0, 256);
+        int g = cv::theRNG().uniform(0, 256);
+        int r = cv::theRNG().uniform(0, 256);
+        colors.push_back(cv::Vec3b((uchar)b, (uchar)g, (uchar)r));
+    }
+}
+
+void getSegmentColors(const cv::Mat& inputImg, const cv::Mat& markers, const std::vector<std::vector<cv::Point>> contours, std::vector<cv::Vec3b>& colors)
+{
+    int numSegments = contours.size();
+    std::vector<int> numSegmentPixels(numSegments,1);
+    std::vector<std::vector<long unsigned int>> segmentRgbSums(numSegments,std::vector<long unsigned int>(3,0));
+
+    // Iterate through the input image
+    for (int ii = 0; ii < inputImg.rows; ii++)
+    {
+        for (int jj = 0; jj < inputImg.cols; jj++)
+        {
+            int index = markers.at<int>(ii,jj);
+            if (index > 0 && index <= static_cast<int>(colorContours.size()))
+            {
+                segmentRgbSums[index-1][0] = segmentRgbSums[index-1][0] + (inputImg.at<cv::Vec3b>(ii,jj)[0]);
+                segmentRgbSums[index-1][1] = segmentRgbSums[index-1][1] + (inputImg.at<cv::Vec3b>(ii,jj)[1]);
+                segmentRgbSums[index-1][2] = segmentRgbSums[index-1][2] + (inputImg.at<cv::Vec3b>(ii,jj)[2]);
+                numSegmentPixels[index-1] +=1; //increment segment pixel count 
+            }
+        }
+
+        // Now, compute average of each segment's RGB values and assign to color vector
+        for (int kk = 0; kk < numSegments; kk++) {
+            colors[kk][0] = segmentRgbSums[kk][0] / numSegmentPixels[kk];
+            colors[kk][1] = segmentRgbSums[kk][1] / numSegmentPixels[kk];
+            colors[kk][2] = segmentRgbSums[kk][2] / numSegmentPixels[kk];
+        }
+    }
+}
+
+// Find peaks of the transformed image
+void finalImage( const cv::Mat& markers, const std::vector<std::vector<cv::Point>> contours, std::vector<cv::Vec3b>& colors, cv::Mat& outputImg)
+{
+    outputImg = cv::Mat::zeros(markers.size(), CV_8UC3);
+    // Fill labeled segments with colors
+    for (int i = 0; i < markers.rows; i++)
+    {
+        for (int j = 0; j < markers.cols; j++)
+        {
+            int index = markers.at<int>(i,j);
+            if (index > 0 && index <= static_cast<int>(contours.size()))
+            {
+                outputImg.at<cv::Vec3b>(i,j) = colors[index-1];
+            }
+        }
+    }
+    // Save and visualize the final image
+    // imshow("Final Result", outputImg);
+    // cv::waitKey(0); // Wait for any keystroke in the window
+    // cv::destroyWindow("Final Result"); //destroy the created window
+    cv::imwrite("../results/out.jpg", outputImg);
+    showImage(outputImg, "Final Image");
 }
 
 // Main program
@@ -190,65 +259,35 @@ int main(int argc, char *argv[]) {
 
     // Find markers
     findMarkers(distImg, colorContours, markers, markerImg, displayIntermediate);
-    // // Create the CV_8U version of the distance image
-    // // It is needed for findContours()
-    // cv::Mat distImg_8u;
-    // distImg.convertTo(distImg_8u, CV_8U);
-    // // Find total markers
-    // std::vector<std::vector<cv::Point> > contours;
-    // cv::findContours(distImg_8u, contours, cv::RETR_EXTERNAL, cv::CHAIN_APPROX_SIMPLE);
-    // // Create the marker image for the watershed algorithm
-    // cv::Mat markers = cv::Mat::zeros(distImg.size(), CV_32S);
-    // // Draw the foreground markers
-    // for (size_t i = 0; i < contours.size(); i++)
-    // {
-    //     drawContours(markers, contours, static_cast<int>(i), cv::Scalar(static_cast<int>(i)+1), -1);
-    // }
-    // // Draw the background marker
-    // cv::circle(markers, cv::Point(5,5), 3, cv::Scalar(255), -1);
-    // cv::Mat markers8u;
-    // markers.convertTo(markers8u, CV_8U, 10);
-    // imshow("Markers", markers8u);
-    // cv::waitKey(0); // Wait for any keystroke in the window
-    // cv::destroyWindow("Markers"); //destroy the created window
-
 
     // Perform the watershed algorithm
-    cv::watershed(sharperImg, markers);
-    cv::Mat mark;
-    markers.convertTo(mark, CV_8U);
-    bitwise_not(mark, mark);
-    imshow("Markers_v2", mark); // uncomment this if you want to see how the mark image looks like at that point
-    cv::waitKey(0); // Wait for any keystroke in the window
-    cv::destroyWindow("Markers_v2"); //destroy the created window
+    findWatershedMarkers(sharperImg, markers, watershedMarkerImg, displayIntermediate);
 
     // Generate random colors
-    std::vector<cv::Vec3b> colors;
-    for (size_t i = 0; i < colorContours.size(); i++)
-    {
-        int b = cv::theRNG().uniform(0, 256);
-        int g = cv::theRNG().uniform(0, 256);
-        int r = cv::theRNG().uniform(0, 256);
-        colors.push_back(cv::Vec3b((uchar)b, (uchar)g, (uchar)r));
-    }
+    getRandomColors(colorContours, colors);
+
+    // Generate true colors
+    getSegmentColors(sharperImg, markers, colorContours, colors);
+
     // Create the final image
-    cv::Mat dst = cv::Mat::zeros(markers.size(), CV_8UC3);
-    // Fill labeled objects with random colors
-    for (int i = 0; i < markers.rows; i++)
-    {
-        for (int j = 0; j < markers.cols; j++)
-        {
-            int index = markers.at<int>(i,j);
-            if (index > 0 && index <= static_cast<int>(colorContours.size()))
-            {
-                dst.at<cv::Vec3b>(i,j) = colors[index-1];
-            }
-        }
-    }
-    // Visualize the final image
-    imshow("Final Result", dst);
-    cv::waitKey(0); // Wait for any keystroke in the window
-    cv::destroyWindow("Final Result"); //destroy the created window
+    finalImage(markers, colorContours, colors, finalImg);
+    // cv::Mat dst = cv::Mat::zeros(markers.size(), CV_8UC3);
+    // // Fill labeled objects with random colors
+    // for (int i = 0; i < markers.rows; i++)
+    // {
+    //     for (int j = 0; j < markers.cols; j++)
+    //     {
+    //         int index = markers.at<int>(i,j);
+    //         if (index > 0 && index <= static_cast<int>(colorContours.size()))
+    //         {
+    //             dst.at<cv::Vec3b>(i,j) = colors[index-1];
+    //         }
+    //     }
+    // }
+    // // Visualize the final image
+    // imshow("Final Result", dst);
+    // cv::waitKey(0); // Wait for any keystroke in the window
+    // cv::destroyWindow("Final Result"); //destroy the created window
 
     return 0;
 }
