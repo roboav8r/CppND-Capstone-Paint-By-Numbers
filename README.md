@@ -19,10 +19,15 @@ This program segments an image into a smaller subset of colors in a paint-by-num
 1. Clone this repo.
 2. Make a build directory in the top level directory: `mkdir build && cd build`
 3. Compile: `cmake .. && make`
-4. Run it: `./PaintByNumbers ../data/dog1.jpg 0.1`.
+4. Run it: `./PaintByNumbers `.
 
 Also, try these combinations!
-`./PaintByNumbers ../data/dog2.jpg 0.1 21 21 5 0.75 0 0.01 1`
+`./PaintByNumbers ../data/apache.jpg True 0.3 15 35 3 0.25 0 0.01 0`
+`./PaintByNumbers ../data/blackhawk.jpg True 1.5 15 35 3 1.5 50 0.0275 0`
+`./PaintByNumbers ../data/dog.jpg True 0.1 21 21 3 1.25 0 0.005 0`
+`./PaintByNumbers ../data/f14.jpg True 1.0 21 15 1 1.5 0 0.01 1`
+`./PaintByNumbers ../data/yoda.jpeg True 0.75 30 30 3 1.75 0 0.03 1`
+
 
 
 
