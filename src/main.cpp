@@ -219,9 +219,6 @@ void finalImage( const cv::Mat& markers, const std::vector<std::vector<cv::Point
         }
     }
     // Save and visualize the final image
-    // imshow("Final Result", outputImg);
-    // cv::waitKey(0); // Wait for any keystroke in the window
-    // cv::destroyWindow("Final Result"); //destroy the created window
     cv::imwrite("../results/out.jpg", outputImg);
     showImage(outputImg, "Final Image");
 }
@@ -271,23 +268,6 @@ int main(int argc, char *argv[]) {
 
     // Create the final image
     finalImage(markers, colorContours, colors, finalImg);
-    // cv::Mat dst = cv::Mat::zeros(markers.size(), CV_8UC3);
-    // // Fill labeled objects with random colors
-    // for (int i = 0; i < markers.rows; i++)
-    // {
-    //     for (int j = 0; j < markers.cols; j++)
-    //     {
-    //         int index = markers.at<int>(i,j);
-    //         if (index > 0 && index <= static_cast<int>(colorContours.size()))
-    //         {
-    //             dst.at<cv::Vec3b>(i,j) = colors[index-1];
-    //         }
-    //     }
-    // }
-    // // Visualize the final image
-    // imshow("Final Result", dst);
-    // cv::waitKey(0); // Wait for any keystroke in the window
-    // cv::destroyWindow("Final Result"); //destroy the created window
 
     return 0;
 }
