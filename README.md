@@ -1,6 +1,12 @@
 # Udacity C++ Nanodegree Capstone Repo: "Paint By Numbers"
 
+This is my original submission for Udacity's C++ Developer Nanodegree program. 
+
 This program segments an image into a smaller subset of colors in a paint-by-number style using OpenCV in C++. This is based off of the starter repo for the Capstone project in the [Udacity C++ Nanodegree Program](https://www.udacity.com/course/c-plus-plus-nanodegree--nd213).
+
+# Project Organization
+
+
 
 ## Dependencies for Running Locally
 * cmake >= 3.7
@@ -13,11 +19,23 @@ This program segments an image into a smaller subset of colors in a paint-by-num
   * Linux: gcc / g++ is installed by default on most Linux distros
   * Mac: same deal as make - [install Xcode command line tools](https://developer.apple.com/xcode/features/)
   * Windows: recommend using [MinGW](http://www.mingw.org/)
-
+* OpenCV==4.2
+  * Linux
+    - In a directory of your choice: `wget -O opencv.zip https://github.com/opencv/opencv/archive/refs/tags/4.2.0.zip`
+    - `unzip opencv.zip`
+    - `mv opencv-4.2.0/ opencv`
+    - `mkdir -p build && cd build`
+    - `cmake ../opencv`
+    - `make -j4` (This will take several minutes)
+    - `sudo make install`
+  * Mac: [Installation instructions](https://www.geeksforgeeks.org/how-to-install-opencv-for-c-on-macos/)
+  * Windows: [Installation instructions](https://learnopencv.com/install-opencv-on-windows/)
+  * Important note: version 4.2 is required!
+  
 ## Basic Build Instructions
 
-1. Clone this repo.
-2. Make a build directory in the top level directory: `mkdir build && cd build`
+1. Clone this repo: `git clone https://github.com/roboav8r/CppND-Capstone-Paint-By-Numbers.git`
+2. Make a build directory in the top level directory: `cd CppND-Capstone-Paint-By-Numbers && mkdir build && cd build`
 3. Compile: `cmake .. && make`
 4. Run it: `./PaintByNumbers `.
 

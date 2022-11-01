@@ -21,8 +21,8 @@ namespace Segmentation {
             CONSTRUCTORS
             */
             
-            Watershed( bool display_int, std::string filename, float scale, int spatial_window, int color_window, int gauss_blur_width, float sharp_coeff, int gray_thresh, float peak_thresh, int dilate_wid) : 
-            displayInt_(display_int), 
+            Watershed( bool disp, std::string filename, float scale, int spatial_window, int color_window, int gauss_blur_width, float sharp_coeff, int gray_thresh, float peak_thresh, int dilate_wid) : 
+            display_(disp), 
             scaleFactor_(scale),
             spatialWindow_(spatial_window),
             colorWindow_(color_window),
@@ -61,7 +61,7 @@ namespace Segmentation {
                 };
 
                 // Show the initial image
-                if (displayInt_) { showImage(inputImg, "Initial Image");};
+                if (display_) { showImage(inputImg, "Initial Image");};
             }
 
             // Scale the input image by a scaling factor
@@ -73,7 +73,7 @@ namespace Segmentation {
                 cv::resize(srcImg_, scaledImg_, cv::Size(widthScaled, heightScaled), cv::INTER_LINEAR);
                 
                 // Show the scaled image
-                if (displayInt_) { showImage(scaledImg_, "Scaled Image");};
+                if (display_) { showImage(scaledImg_, "Scaled Image");};
             }
 
             // Mean-shift filter the image
@@ -83,7 +83,7 @@ namespace Segmentation {
                 cv::pyrMeanShiftFiltering(scaledImg_,filteredImg_,spatialWindow_,colorWindow_);
                 
                 // Display the filtered image
-                if (displayInt_) { showImage(filteredImg_, "Mean-Shift Filtered Image");}
+                if (display_) { showImage(filteredImg_, "Mean-Shift Filtered Image");}
             }
 
             // Gaussian Blur/smooth the image
@@ -93,7 +93,7 @@ namespace Segmentation {
                 cv::GaussianBlur(filteredImg_,smoothedImg_,cv::Size(gaussianBlurWidth_,gaussianBlurWidth_),0,0);
                 
                 // Display the smoothed image
-                if (displayInt_) { showImage(smoothedImg_, "Smoothed Image");}
+                if (display_) { showImage(smoothedImg_, "Smoothed Image");}
             }
 
             // Sharpen the image
@@ -114,7 +114,7 @@ namespace Segmentation {
                 laplacianImg.convertTo(laplacianImg, CV_8UC3);
 
                 // Display the sharpened image
-                if (displayInt_) { showImage(sharperImg_, "Sharpened Image");}
+                if (display_) { showImage(sharperImg_, "Sharpened Image");}
             }
 
             // Compute distance transform
@@ -124,12 +124,12 @@ namespace Segmentation {
                 cv::cvtColor(sharperImg_, grayImg, cv::COLOR_BGR2GRAY);
                 std::cout << "Converting to binary image with 8-bit threshold " << grayThreshold_ << std::endl;
                 cv::threshold(grayImg, grayImg, grayThreshold_, 255, cv::THRESH_BINARY | cv::THRESH_OTSU);
-                if (displayInt_) { showImage(grayImg, "Grayscale Image");}
+                if (display_) { showImage(grayImg, "Grayscale Image");}
 
                 // Compute distance image
                 cv::distanceTransform(grayImg,distImg_,cv::DIST_L2, 3); // Potential improvement: the final mask parameter can be an input variable
                 cv::normalize(distImg_,distImg_, 0, 1.0, cv::NORM_MINMAX);
-                if (displayInt_) { showImage(distImg_, "Distance Transform Image");}
+                if (display_) { showImage(distImg_, "Distance Transform Image");}
             }
 
             // Find peaks of the distance-transformed image
@@ -139,7 +139,7 @@ namespace Segmentation {
                 cv::threshold(distImg_, distImg_, peakThresh_, 1.0, cv::THRESH_BINARY);
                 cv::Mat kernelImg = cv::Mat::ones(dilateWidth_, dilateWidth_, CV_8U);
                 cv::dilate(distImg_, peakImg_, kernelImg);
-                if (displayInt_) { showImage(peakImg_, "Peaks");}
+                if (display_) { showImage(peakImg_, "Peaks");}
             }
 
             // Find markers of each individual segment
@@ -162,7 +162,7 @@ namespace Segmentation {
                 cv::circle(markers_, cv::Point(5,5), 3, cv::Scalar(255), -1);
                 //cv::Mat markers8u;
                 markers_.convertTo(markerImg_, CV_8U, 10);
-                if (displayInt_) { showImage(markerImg_, "Markers");}
+                if (display_) { showImage(markerImg_, "Markers");}
             }
 
             // Run the watershed algorithm
@@ -173,7 +173,7 @@ namespace Segmentation {
                 markers_.convertTo(watershedMarkerImg_, CV_8U);
                 bitwise_not(watershedMarkerImg_, watershedMarkerImg_);
 
-                if (displayInt_) { showImage(watershedMarkerImg_, "Watershed Markers");}
+                if (display_) { showImage(watershedMarkerImg_, "Watershed Markers");}
             }
 
             // Select random colors for each segment
@@ -196,7 +196,7 @@ namespace Segmentation {
                 std::vector<int> numSegmentPixels(numSegments,1);
                 std::vector<std::vector<long unsigned int>> segmentRgbSums(numSegments,std::vector<long unsigned int>(3,0));
 
-                // Iterate through the input image
+                // Iterate through the input image and sum RGB values for each pixel
                 for (int ii = 0; ii < smoothedImg_.rows; ii++)
                 {
                     for (int jj = 0; jj < smoothedImg_.cols; jj++)
@@ -210,13 +210,14 @@ namespace Segmentation {
                             numSegmentPixels[index-1] +=1; //increment segment pixel count 
                         }
                     }
+                }
 
-                    // Now, compute average of each segment's RGB values and assign to color vector
-                    for (int kk = 0; kk < numSegments; kk++) {
-                        colors_[kk][0] = segmentRgbSums[kk][0] / numSegmentPixels[kk];
-                        colors_[kk][1] = segmentRgbSums[kk][1] / numSegmentPixels[kk];
-                        colors_[kk][2] = segmentRgbSums[kk][2] / numSegmentPixels[kk];
-                    }
+                // Now, compute average of each segment's RGB values and assign to color vector
+                for (int kk = 0; kk < numSegments; kk++) {
+                    int b = segmentRgbSums[kk][0] / numSegmentPixels[kk];
+                    int g = segmentRgbSums[kk][1] / numSegmentPixels[kk];
+                    int r = segmentRgbSums[kk][2] / numSegmentPixels[kk];
+                    colors_.push_back(cv::Vec3b((uchar)b, (uchar)g, (uchar)r));
                 }
             }
 
@@ -238,7 +239,7 @@ namespace Segmentation {
                 }
                 // Save and visualize the final image
                 cv::imwrite("../results/out.jpg", finalImg_);
-                showImage(finalImg_, "Final Image");
+                if (display_) { showImage(finalImg_, "Final Image"); }
             }
 
         private:
@@ -247,7 +248,7 @@ namespace Segmentation {
             peakImg_, markers_, markerImg_, watershedMarkerImg_, finalImg_;
             std::vector<std::vector<cv::Point>> contours_; // contour lines
             std::vector<cv::Vec3b> colors_; // segment colors
-            const bool displayInt_; // Display intermediate image processing steps
+            const bool display_; // Display intermediate image processing steps
             const float scaleFactor_; // How much to scale the input image
             const int spatialWindow_; // Spatial window to use during mean-shift filtering
             const int colorWindow_; // Color window to use during mean-shift filtering
