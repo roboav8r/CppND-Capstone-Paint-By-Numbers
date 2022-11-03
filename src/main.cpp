@@ -4,16 +4,16 @@
 
 // Keys for command-line input values
 std::string keys = 
-    "{@input | ../data/dog1.jpg | input image file}"
-    "{@displayIntermediate | 1 | Boolean true/false to show intermediate image processing steps}"
+    "{@input | ../data/dog.jpg | input image file}"
+    "{@displayIntermediate | 0 | Boolean true/false to show intermediate image processing steps}"
     "{@scale | 0.1 | input image scale}"
     "{@spatialWindow | 21 | Spatial window for Mean Shift filtering}"
-    "{@colorWindow | 51 | Color window for Mean Shift filtering}"
-    "{@blurWidth | 5 | Width of gaussian blur filter}"
-    "{@sharpCoeff | 1.0 | Sharpening coefficient}"
-    "{@binThresh | 40 | Binary threshold for grayscale computation}"
-    "{@peakThresh | 0.4 | Floating point threshold [0, 1.0) for peak finding}"
-    "{@dilateWidth | 3 | Integer width to dilate the peaks }";
+    "{@colorWindow | 21 | Color window for Mean Shift filtering}"
+    "{@blurWidth | 3 | Width of gaussian blur filter}"
+    "{@sharpCoeff | 1.25 | Sharpening coefficient}"
+    "{@binThresh | 0 | Binary threshold for grayscale computation}"
+    "{@peakThresh | 0.005 | Floating point threshold [0, 1.0) for peak finding}"
+    "{@dilateWidth | 1 | Integer width to dilate the peaks }";
 
 
 // Main program
